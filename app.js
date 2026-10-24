@@ -5,6 +5,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = loadState();
 let currentDate = todayKey();
+let calendarMonth = monthStartKey(currentDate);
 let archiveFilter = "all";
 let saveTimer;
 
@@ -15,6 +16,7 @@ const els = {
   summary: $("#summaryInput"), keepsake: $("#keepsakeInput"), keep: $("#keepToggle"),
   peopleLogList: $("#peopleLogList"), addPersonLog: $("#addPersonLogBtn"),
   saveIndicator: $("#saveIndicator"), recordGrid: $("#recordGrid"), archiveCount: $("#archiveCount"),
+  calendarTitle: $("#calendarTitle"), calendarGrid: $("#calendarGrid"), calendarStats: $("#calendarStats"),
   search: $("#searchInput"), peopleSearch: $("#peopleSearchInput"), peopleGrid: $("#peopleGrid"), peopleSummary: $("#peopleSummary"),
   weekRange: $("#weekRange"), weekDays: $("#weekDays"),
   weeklyGems: $("#weeklyGems"), weeklyPattern: $("#weeklyPattern"), weeklyEnergy: $("#weeklyEnergy"),
@@ -32,6 +34,10 @@ function loadState() {
 function todayKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+}
+
+function monthStartKey(dateKey = todayKey()) {
+  return `${dateKey.slice(0,7)}-01`;
 }
 
 function blankEntry() {
@@ -160,10 +166,65 @@ function addPersonLog() {
 function switchView(view) {
   $$(".view").forEach(el => el.classList.toggle("active", el.id === `${view}View`));
   $$('[data-view]').forEach(el => el.classList.toggle("active", el.dataset.view === view));
+  if (view === "calendar") renderCalendar();
   if (view === "archive") renderArchive();
   if (view === "people") renderPeople();
   if (view === "weekly") renderWeekly();
   window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function renderCalendar() {
+  const monthStart = new Date(`${calendarMonth}T12:00:00`);
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingDays = (monthStart.getDay() + 6) % 7;
+  const monthPrefix = calendarMonth.slice(0,7);
+  const monthEntries = Object.entries(state.entries)
+    .filter(([date, entry]) => date.startsWith(monthPrefix) && hasContent(entry));
+  const keptCount = monthEntries.filter(([,entry]) => entry.keep).length;
+  const peopleCount = monthEntries.reduce((sum,[,entry]) => sum + (entry.people || []).filter(person => person.name || person.conversation || person.followUp).length, 0);
+
+  els.calendarTitle.textContent = `${year}년 ${month + 1}월`;
+  els.calendarStats.innerHTML = `<div><strong>${monthEntries.length}</strong><span>기록한 날</span></div><div><strong>${keptCount}</strong><span>남긴 보석</span></div><div><strong>${peopleCount}</strong><span>사람 대화</span></div>`;
+  els.calendarGrid.innerHTML = "";
+
+  const totalCells = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
+  for (let index = 0; index < totalCells; index++) {
+    const day = index - leadingDays + 1;
+    if (day < 1 || day > daysInMonth) {
+      const empty = document.createElement("span");
+      empty.className = "calendar-day calendar-day-empty";
+      empty.setAttribute("aria-hidden", "true");
+      els.calendarGrid.append(empty);
+      continue;
+    }
+
+    const date = `${year}-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const entry = state.entries[date];
+    const recorded = Boolean(entry && hasContent(entry));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `calendar-day${recorded ? " recorded" : ""}${entry?.keep ? " kept" : ""}${date === todayKey() ? " is-today" : ""}`;
+    button.setAttribute("aria-label", `${formatDate(date,{month:"long",day:"numeric",weekday:"long"})}${recorded ? ", 기록 있음" : ", 기록 없음"}`);
+    if (date === todayKey()) button.setAttribute("aria-current", "date");
+    const preview = recorded ? escapeHtml(entry.summary || entry.focus || entry.memo || "기록한 하루") : "";
+    button.innerHTML = `<span class="calendar-day-number">${day}</span>${entry?.keep ? '<span class="calendar-gem" aria-label="보석">◆</span>' : ""}${recorded ? `<span class="calendar-entry-preview">${preview}</span><span class="calendar-dot" aria-hidden="true"></span>` : ""}`;
+    button.addEventListener("click", () => {
+      currentDate = date;
+      calendarMonth = monthStartKey(date);
+      renderToday();
+      switchView("today");
+    });
+    els.calendarGrid.append(button);
+  }
+}
+
+function moveCalendarMonth(offset) {
+  const date = new Date(`${calendarMonth}T12:00:00`);
+  date.setMonth(date.getMonth() + offset);
+  calendarMonth = localKey(new Date(date.getFullYear(), date.getMonth(), 1));
+  renderCalendar();
 }
 
 function renderArchive() {
@@ -349,8 +410,11 @@ function showToast(message) { els.toast.textContent=message; els.toast.classList
 $$('[data-view]').forEach(button => button.addEventListener("click", () => switchView(button.dataset.view)));
 $$('[data-task-type]').forEach(button => button.addEventListener("click", () => addTask(button.dataset.taskType)));
 els.addPersonLog.addEventListener("click",addPersonLog);
-els.dateInput.addEventListener("change", () => { if(els.dateInput.value){currentDate=els.dateInput.value;renderToday();} });
-$("#goTodayBtn").addEventListener("click", () => {currentDate=todayKey();renderToday();});
+els.dateInput.addEventListener("change", () => { if(els.dateInput.value){currentDate=els.dateInput.value;calendarMonth=monthStartKey(currentDate);renderToday();} });
+$("#goTodayBtn").addEventListener("click", () => {currentDate=todayKey();calendarMonth=monthStartKey(currentDate);renderToday();});
+$("#calendarPrevBtn").addEventListener("click", () => moveCalendarMonth(-1));
+$("#calendarNextBtn").addEventListener("click", () => moveCalendarMonth(1));
+$("#calendarTodayBtn").addEventListener("click", () => { calendarMonth=monthStartKey(todayKey()); renderCalendar(); });
 $("#exportTodayBtn").addEventListener("click", () => exportEntryMarkdown(currentDate));
 $("#exportAllBtn").addEventListener("click", exportAllMarkdown);
 els.focus.addEventListener("input",()=>updateEntry(e=>e.focus=els.focus.value));
