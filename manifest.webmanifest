@@ -1,0 +1,10 @@
+{
+  "name": "거인의 기록",
+  "short_name": "거인의 기록",
+  "description": "할 일과 하루의 흐름을 기록하고 다시 볼 생각을 선별하는 개인 기록장",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f4",
+  "theme_color": "#f4f4f4",
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
