@@ -45,7 +45,7 @@ function monthStartKey(dateKey = todayKey()) {
 }
 
 function blankEntry() {
-  return { focus:"", tasks:{work:[],personal:[]}, timeline:TIME_SLOTS.map(() => ""), memo:"", people:[], summary:"", keepsake:"", keep:false, updatedAt:null };
+  return { focus:"", tasks:{work:[],personal:[]}, timeline:TIME_SLOTS.map(() => ""), memo:"", people:[], summary:"", keepsake:"", keep:false, createdAt:null, updatedAt:null };
 }
 
 function entryFor(date) {
@@ -71,7 +71,9 @@ function saveState() {
 function updateEntry(mutator) {
   const entry = entryFor(currentDate);
   mutator(entry);
-  entry.updatedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  entry.createdAt ||= now;
+  entry.updatedAt = now;
   saveState();
 }
 
@@ -339,7 +341,9 @@ function renderWeekly() {
 
 function saveWeekly() {
   const key = selectedWeekKey;
-  state.weekly[key] = {gems:els.weeklyGems.value, pattern:els.weeklyPattern.value, energy:els.weeklyEnergy.value, focus:els.weeklyFocus.value, action:els.weeklyAction.value, updatedAt:new Date().toISOString()};
+  const existing = state.weekly[key] || {};
+  const now = new Date().toISOString();
+  state.weekly[key] = {gems:els.weeklyGems.value, pattern:els.weeklyPattern.value, energy:els.weeklyEnergy.value, focus:els.weeklyFocus.value, action:els.weeklyAction.value, createdAt:existing.createdAt || now, updatedAt:now};
   saveState(); renderWeeklyHistory(); showToast("주간회고를 저장했습니다");
   const button = $("#saveWeeklyBtn");
   button.textContent = "저장됨 ✓";
@@ -375,12 +379,41 @@ function renderWeeklyHistory() {
 function yamlQuote(value="") { return `"${String(value).replaceAll("\\","\\\\").replaceAll('"','\\"').replaceAll("\n"," ")}"`; }
 function safeFilename(value="기록") { return value.replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g," ").trim() || "기록"; }
 function personLinks(entry) { return [...new Set((entry.people || []).map(person=>person.name.trim()).filter(Boolean))]; }
+function yamlInline(values=[]) { return `[${values.map(value=>yamlQuote(value)).join(", ")}]`; }
+function journalTimestamp(date,value) { return value || `${date}T00:00:00+09:00`; }
+function weekDateLinks(startKey) {
+  const start = new Date(`${startKey}T12:00:00`);
+  return Array.from({length:7},(_,index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate()+index);
+    return `[[${localKey(date)}]]`;
+  });
+}
 
 function entryMarkdown(date,entry,{frontmatter=true,headingLevel=1}={}) {
   const people = personLinks(entry);
   const lines = [];
   if (frontmatter) {
-    lines.push("---",`type: daily`,`date: ${date}`,`summary: ${yamlQuote(entry.summary || entry.focus)}`,`keep: ${entry.keep ? "true" : "false"}`,`people: [${people.map(name=>yamlQuote(`[[${name}]]`)).join(", ")}]`,"---","");
+    lines.push(
+      "---",
+      `lumloom_id: journal-daily-${date}`,
+      "schema: lumloom-record/v1",
+      "source: journal",
+      "record_type: daily",
+      `title: ${yamlQuote(`${date} ${entry.summary || entry.focus || "하루 기록"}`)}`,
+      `date: ${date}`,
+      `created_at: ${yamlQuote(journalTimestamp(date,entry.createdAt))}`,
+      `updated_at: ${yamlQuote(journalTimestamp(date,entry.updatedAt || entry.createdAt))}`,
+      "status: active",
+      `tags: ${yamlInline(["lumloom","journal"])}`,
+      `people: ${yamlInline(people.map(name=>`[[${name}]]`))}`,
+      `projects: ${yamlInline(["[[Lumloom]]"])}`,
+      "related: []",
+      "published: false",
+      `summary: ${yamlQuote(entry.summary || entry.focus)}`,
+      `keep: ${entry.keep ? "true" : "false"}`,
+      "---",""
+    );
   }
   const prefix = "#".repeat(headingLevel);
   lines.push(`${prefix} ${date} ${entry.summary || entry.focus || "하루 기록"}`,"");
@@ -444,9 +477,21 @@ function exportEntryMarkdown(date,entry=entryFor(date)) {
 function weeklyMarkdown(date,review) {
   const lines = [
     "---",
-    "type: weekly-review",
+    `lumloom_id: journal-weekly-${date}`,
+    "schema: lumloom-record/v1",
+    "source: journal",
+    "record_type: weekly-review",
+    `title: ${yamlQuote(`${date} 주간 회고`)}`,
+    `date: ${date}`,
+    `created_at: ${yamlQuote(journalTimestamp(date,review.createdAt || review.updatedAt))}`,
+    `updated_at: ${yamlQuote(journalTimestamp(date,review.updatedAt || review.createdAt))}`,
+    "status: active",
+    `tags: ${yamlInline(["lumloom","journal","weekly-review"])}`,
+    "people: []",
+    `projects: ${yamlInline(["[[Lumloom]]"])}`,
+    `related: ${yamlInline(weekDateLinks(date))}`,
+    "published: false",
     `week_start: ${date}`,
-    `exported: ${todayKey()}`,
     "---",
     "",
     `# ${date} 주간 회고`,
@@ -472,13 +517,14 @@ async function exportAllMarkdown() {
   try {
     const ZipLibrary = await ensureJSZip();
     const zip = new ZipLibrary();
-    records.forEach(([date,entry]) => zip.file(`${date}.md`,entryMarkdown(date,entry)));
+    records.forEach(([date,entry]) => zip.file(`10. Journal/일일 기록/${date}.md`,entryMarkdown(date,entry)));
 
     const weekly = Object.entries(state.weekly).sort(([a],[b])=>a.localeCompare(b));
     if (weekly.length) {
-      const weeklyFolder = zip.folder("주간회고");
-      weekly.forEach(([date,review]) => weeklyFolder.file(`${date}-주간회고.md`,weeklyMarkdown(date,review)));
+      weekly.forEach(([date,review]) => zip.file(`10. Journal/주간 회고/${date} 주간 회고.md`,weeklyMarkdown(date,review)));
     }
+
+    collectPeople().forEach(person => zip.file(`10. Journal/사람/${safeFilename(person.name)}.md`,personMarkdown(person)));
 
     const blob = await zip.generateAsync({
       type:"blob",
@@ -495,10 +541,36 @@ async function exportAllMarkdown() {
   }
 }
 
-function exportPersonMarkdown(person) {
-  const lines = ["---","type: person",`name: ${yamlQuote(person.name)}`,`aliases: [${yamlQuote(person.name)}]`,`updated: ${person.records[0]?.date || todayKey()}`,"---","",`# ${person.name}`,""];
+function personMarkdown(person) {
+  const dates = person.records.map(record=>record.date).sort();
+  const firstDate = dates[0] || todayKey();
+  const lastDate = dates.at(-1) || firstDate;
+  const personId = safeFilename(person.name).toLocaleLowerCase("ko-KR").replace(/\s+/g,"-");
+  const lines = [
+    "---",
+    `lumloom_id: journal-person-${personId}`,
+    "schema: lumloom-record/v1",
+    "source: journal",
+    "record_type: person-log",
+    `title: ${yamlQuote(person.name)}`,
+    `date: ${lastDate}`,
+    `created_at: ${yamlQuote(journalTimestamp(firstDate))}`,
+    `updated_at: ${yamlQuote(journalTimestamp(lastDate))}`,
+    "status: active",
+    `tags: ${yamlInline(["lumloom","journal","person"])}`,
+    `people: ${yamlInline([`[[${person.name}]]`])}`,
+    `projects: ${yamlInline(["[[Lumloom]]"])}`,
+    `related: ${yamlInline(dates.map(date=>`[[${date}]]`))}`,
+    "published: false",
+    `aliases: ${yamlInline([person.name])}`,
+    "---","",`# ${person.name}`,""
+  ];
   person.records.slice().reverse().forEach(record => lines.push(`## [[${record.date}]]`,"",record.conversation || "대화 내용 없음","",record.followUp ? `**다음 행동**\n\n- [ ] ${record.followUp}\n` : ""));
-  downloadMarkdown(`${safeFilename(person.name)}.md`,lines.join("\n").trim());
+  return lines.join("\n").trim();
+}
+
+function exportPersonMarkdown(person) {
+  downloadMarkdown(`${safeFilename(person.name)}.md`,personMarkdown(person));
 }
 
 function escapeHtml(value="") { const div=document.createElement("div"); div.textContent=value; return div.innerHTML; }
