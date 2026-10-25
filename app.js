@@ -372,6 +372,10 @@ function entryMarkdown(date,entry,{frontmatter=true,headingLevel=1}={}) {
 
 function downloadMarkdown(filename,content) {
   const blob = new Blob([content],{type:"text/markdown;charset=utf-8"});
+  downloadBlob(filename,blob);
+}
+
+function downloadBlob(filename,blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove();
@@ -384,18 +388,58 @@ function exportEntryMarkdown(date,entry=entryFor(date)) {
   downloadMarkdown(`${date}.md`,entryMarkdown(date,entry));
 }
 
-function exportAllMarkdown() {
+function weeklyMarkdown(date,review) {
+  const lines = [
+    "---",
+    "type: weekly-review",
+    `week_start: ${date}`,
+    `exported: ${todayKey()}`,
+    "---",
+    "",
+    `# ${date} 주간 회고`,
+    ""
+  ];
+  if (review.gems) lines.push("## 세 가지 보석","",review.gems,"");
+  if (review.pattern) lines.push("## 반복한 패턴","",review.pattern,"");
+  if (review.energy) lines.push("## 에너지","",review.energy,"");
+  if (review.focus) lines.push("## 다음 주 중심","",review.focus,"");
+  if (review.action) lines.push("## 첫 행동","",`- [ ] ${review.action}`,"");
+  return lines.join("\n").trim();
+}
+
+async function exportAllMarkdown() {
   const records = Object.entries(state.entries).filter(([,entry])=>hasContent(entry)).sort(([a],[b])=>a.localeCompare(b));
   if (!records.length) { showToast("내보낼 기록이 아직 없어요"); return; }
-  const allPeople = [...new Set(records.flatMap(([,entry])=>personLinks(entry)))];
-  const lines = ["---","type: journal-export",`exported: ${todayKey()}`,`people: [${allPeople.map(name=>yamlQuote(`[[${name}]]`)).join(", ")}]`,"---","","# 기록 모음",""];
-  records.forEach(([date,entry]) => lines.push(entryMarkdown(date,entry,{frontmatter:false,headingLevel:2}),"","---",""));
-  const weekly = Object.entries(state.weekly).sort(([a],[b])=>a.localeCompare(b));
-  if (weekly.length) {
-    lines.push("# 주간 회고","");
-    weekly.forEach(([date,review]) => lines.push(`## ${date} 주간`,"",review.gems ? `### 세 가지 보석\n\n${review.gems}\n` : "",review.pattern ? `### 반복한 패턴\n\n${review.pattern}\n` : "",review.energy ? `### 에너지\n\n${review.energy}\n` : "",review.focus ? `### 다음 주 중심\n\n${review.focus}\n` : "",review.action ? `### 첫 행동\n\n- [ ] ${review.action}\n` : ""));
+  if (typeof JSZip === "undefined") { showToast("ZIP 기능을 불러오지 못했습니다. 인터넷 연결을 확인해주세요"); return; }
+
+  const button = $("#exportAllBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "ZIP 만드는 중…";
+
+  try {
+    const zip = new JSZip();
+    records.forEach(([date,entry]) => zip.file(`${date}.md`,entryMarkdown(date,entry)));
+
+    const weekly = Object.entries(state.weekly).sort(([a],[b])=>a.localeCompare(b));
+    if (weekly.length) {
+      const weeklyFolder = zip.folder("주간회고");
+      weekly.forEach(([date,review]) => weeklyFolder.file(`${date}-주간회고.md`,weeklyMarkdown(date,review)));
+    }
+
+    const blob = await zip.generateAsync({
+      type:"blob",
+      compression:"DEFLATE",
+      compressionOptions:{level:6}
+    });
+    downloadBlob(`Journal-${todayKey()}.zip`,blob);
+  } catch (error) {
+    console.error("ZIP export failed",error);
+    showToast("ZIP 파일을 만드는 중 문제가 생겼습니다");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
   }
-  downloadMarkdown(`Journal-${todayKey()}.md`,lines.filter(line=>line!==undefined).join("\n").trim());
 }
 
 function exportPersonMarkdown(person) {
@@ -415,7 +459,6 @@ $("#goTodayBtn").addEventListener("click", () => {currentDate=todayKey();calenda
 $("#calendarPrevBtn").addEventListener("click", () => moveCalendarMonth(-1));
 $("#calendarNextBtn").addEventListener("click", () => moveCalendarMonth(1));
 $("#calendarTodayBtn").addEventListener("click", () => { calendarMonth=monthStartKey(todayKey()); renderCalendar(); });
-$("#exportTodayBtn").addEventListener("click", () => exportEntryMarkdown(currentDate));
 $("#exportAllBtn").addEventListener("click", exportAllMarkdown);
 els.focus.addEventListener("input",()=>updateEntry(e=>e.focus=els.focus.value));
 els.memo.addEventListener("input",()=>updateEntry(e=>e.memo=els.memo.value));

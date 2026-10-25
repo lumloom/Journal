@@ -46,7 +46,6 @@
               <p class="date-copy" id="displayWeekday"></p>
             </div>
             <div class="header-actions">
-              <button class="icon-button" id="exportTodayBtn" type="button">오늘 MD</button>
               <button class="icon-button" id="goTodayBtn" type="button">오늘</button>
               <label class="date-picker"><span class="sr-only">기록 날짜</span><input id="dateInput" type="date" /></label>
             </div>
@@ -131,7 +130,7 @@
             <div><p class="eyebrow">ARCHIVE</p><h1>지난 기록</h1><p class="date-copy">쌓인 하루를 천천히 다시 봅니다.</p></div>
             <div class="archive-header-actions">
               <label class="search-box"><span class="sr-only">기록 검색</span><input id="searchInput" type="search" placeholder="기록에서 검색" /></label>
-              <button class="primary-button" id="exportAllBtn" type="button">전체 MD</button>
+              <button class="primary-button" id="exportAllBtn" type="button">전체 MD · ZIP</button>
             </div>
           </header>
           <div class="archive-toolbar">
@@ -187,6 +186,7 @@
       <article class="dialog-card"><button class="dialog-close" id="dialogClose" type="button" aria-label="닫기">×</button><div id="dialogContent"></div></article>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
