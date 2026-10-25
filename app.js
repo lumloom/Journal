@@ -8,6 +8,7 @@ const state = loadState();
 let currentDate = todayKey();
 let calendarMonth = monthStartKey(currentDate);
 let archiveFilter = "all";
+let selectedWeekKey = weekStartKey();
 let saveTimer;
 let jsZipPromise;
 
@@ -20,9 +21,10 @@ const els = {
   saveIndicator: $("#saveIndicator"), recordGrid: $("#recordGrid"), archiveCount: $("#archiveCount"),
   calendarTitle: $("#calendarTitle"), calendarGrid: $("#calendarGrid"), calendarStats: $("#calendarStats"),
   search: $("#searchInput"), peopleSearch: $("#peopleSearchInput"), peopleGrid: $("#peopleGrid"), peopleSummary: $("#peopleSummary"),
-  weekRange: $("#weekRange"), weekDays: $("#weekDays"),
+  weeklyTitle: $("#weeklyTitle"), weekRange: $("#weekRange"), weekDays: $("#weekDays"),
   weeklyGems: $("#weeklyGems"), weeklyPattern: $("#weeklyPattern"), weeklyEnergy: $("#weeklyEnergy"),
-  weeklyFocus: $("#weeklyFocus"), weeklyAction: $("#weeklyAction"), toast: $("#toast"),
+  weeklyFocus: $("#weeklyFocus"), weeklyAction: $("#weeklyAction"), weeklyReviewList: $("#weeklyReviewList"),
+  weeklyReviewCount: $("#weeklyReviewCount"), currentWeek: $("#currentWeekBtn"), toast: $("#toast"),
   dialog: $("#recordDialog"), dialogContent: $("#dialogContent")
 };
 
@@ -171,7 +173,7 @@ function switchView(view) {
   if (view === "calendar") renderCalendar();
   if (view === "archive") renderArchive();
   if (view === "people") renderPeople();
-  if (view === "weekly") renderWeekly();
+  if (view === "weekly") { selectedWeekKey = weekStartKey(); renderWeekly(); }
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -314,10 +316,13 @@ function weekStartKey(dateKey = todayKey()) {
 function localKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
 
 function renderWeekly() {
-  const startKey = weekStartKey();
+  const startKey = selectedWeekKey;
   const start = new Date(`${startKey}T12:00:00`);
   const end = new Date(start); end.setDate(end.getDate()+6);
-  els.weekRange.textContent = `${formatDate(startKey,{month:"long",day:"numeric"})} – ${formatDate(localKey(end),{month:"long",day:"numeric"})}`;
+  const isCurrentWeek = startKey === weekStartKey();
+  els.weeklyTitle.textContent = isCurrentWeek ? "이번 주를 다시 삶으로" : "저장된 주간 회고";
+  els.weekRange.textContent = `${formatDate(startKey,{year:"numeric",month:"long",day:"numeric"})} – ${formatDate(localKey(end),{month:"long",day:"numeric"})}`;
+  els.currentWeek.hidden = isCurrentWeek;
   els.weekDays.innerHTML = "";
   for (let i=0;i<7;i++) {
     const date = new Date(start); date.setDate(date.getDate()+i);
@@ -329,12 +334,42 @@ function renderWeekly() {
   const review = state.weekly[startKey] || {};
   els.weeklyGems.value = review.gems || ""; els.weeklyPattern.value = review.pattern || "";
   els.weeklyEnergy.value = review.energy || ""; els.weeklyFocus.value = review.focus || ""; els.weeklyAction.value = review.action || "";
+  renderWeeklyHistory();
 }
 
 function saveWeekly() {
-  const key = weekStartKey();
+  const key = selectedWeekKey;
   state.weekly[key] = {gems:els.weeklyGems.value, pattern:els.weeklyPattern.value, energy:els.weeklyEnergy.value, focus:els.weeklyFocus.value, action:els.weeklyAction.value, updatedAt:new Date().toISOString()};
-  saveState(); showToast("이번 주 회고를 저장했습니다");
+  saveState(); renderWeeklyHistory(); showToast("주간회고를 저장했습니다");
+  const button = $("#saveWeeklyBtn");
+  button.textContent = "저장됨 ✓";
+  setTimeout(() => button.textContent = "회고 저장",1600);
+}
+
+function renderWeeklyHistory() {
+  const reviews = Object.entries(state.weekly).sort(([a],[b]) => b.localeCompare(a));
+  els.weeklyReviewCount.textContent = `${reviews.length}개의 회고`;
+  els.weeklyReviewList.innerHTML = "";
+  if (!reviews.length) {
+    els.weeklyReviewList.innerHTML = `<div class="weekly-history-empty">저장한 회고가 생기면 이곳에서 다시 열어볼 수 있어요.</div>`;
+    return;
+  }
+  reviews.forEach(([startKey,review]) => {
+    const start = new Date(`${startKey}T12:00:00`);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    const preview = review.pattern || review.gems || review.energy || review.action || "작성한 주간회고";
+    const updated = review.updatedAt ? formatDate(localKey(new Date(review.updatedAt)),{month:"short",day:"numeric"}) : "";
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = `weekly-review-card${startKey === selectedWeekKey ? " active" : ""}`;
+    card.innerHTML = `<time>${formatDate(startKey,{year:"numeric",month:"short",day:"numeric"})} – ${formatDate(localKey(end),{month:"short",day:"numeric"})}</time><h3>${escapeHtml(review.focus || "주간 회고")}</h3><p>${escapeHtml(preview)}</p><footer><span>${updated ? `${updated} 저장` : "저장됨"}</span><span>열어보기 →</span></footer>`;
+    card.addEventListener("click", () => {
+      selectedWeekKey = startKey;
+      renderWeekly();
+      window.scrollTo({top:0,behavior:"smooth"});
+    });
+    els.weeklyReviewList.append(card);
+  });
 }
 
 function yamlQuote(value="") { return `"${String(value).replaceAll("\\","\\\\").replaceAll('"','\\"').replaceAll("\n"," ")}"`; }
@@ -487,6 +522,7 @@ els.search.addEventListener("input",renderArchive);
 els.peopleSearch.addEventListener("input",renderPeople);
 $$('[data-filter]').forEach(button=>button.addEventListener("click",()=>{archiveFilter=button.dataset.filter;$$('[data-filter]').forEach(el=>el.classList.toggle("active",el===button));renderArchive();}));
 $("#saveWeeklyBtn").addEventListener("click",saveWeekly);
+els.currentWeek.addEventListener("click",()=>{selectedWeekKey=weekStartKey();renderWeekly();window.scrollTo({top:0,behavior:"smooth"});});
 $("#dialogClose").addEventListener("click",()=>els.dialog.close());
 els.dialog.addEventListener("click",event=>{if(event.target===els.dialog)els.dialog.close();});
 window.addEventListener("storage",event=>{if(event.key===STORAGE_KEY)location.reload();});

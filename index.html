@@ -154,8 +154,11 @@
 
         <section class="view" id="weeklyView">
           <header class="page-header section-page-header">
-            <div><p class="eyebrow">WEEKLY REVIEW</p><h1>이번 주를 다시 삶으로</h1><p class="date-copy" id="weekRange"></p></div>
-            <button class="primary-button" id="saveWeeklyBtn" type="button">회고 저장</button>
+            <div><p class="eyebrow">WEEKLY REVIEW</p><h1 id="weeklyTitle">이번 주를 다시 삶으로</h1><p class="date-copy" id="weekRange"></p></div>
+            <div class="weekly-header-actions">
+              <button class="icon-button" id="currentWeekBtn" type="button" hidden>이번 주로 돌아가기</button>
+              <button class="primary-button" id="saveWeeklyBtn" type="button">회고 저장</button>
+            </div>
           </header>
           <div class="weekly-layout">
             <section class="card week-days-card"><div class="section-label"><span>01</span><h2>7일 훑어보기</h2></div><div id="weekDays"></div></section>
@@ -170,6 +173,10 @@
               </div>
             </section>
           </div>
+          <section class="weekly-history-section">
+            <div class="weekly-history-heading"><div><p class="eyebrow">SAVED REVIEWS</p><h2>저장된 주간회고</h2></div><p id="weeklyReviewCount"></p></div>
+            <div class="weekly-review-list" id="weeklyReviewList"></div>
+          </section>
         </section>
       </main>
     </div>
