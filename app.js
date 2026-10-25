@@ -1,4 +1,5 @@
 const STORAGE_KEY = "giant-journal-v1";
+const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 const TIME_SLOTS = ["06–09", "09–12", "12–15", "15–18", "18–21", "21–24"];
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -8,6 +9,7 @@ let currentDate = todayKey();
 let calendarMonth = monthStartKey(currentDate);
 let archiveFilter = "all";
 let saveTimer;
+let jsZipPromise;
 
 const els = {
   dateInput: $("#dateInput"), displayDate: $("#displayDate"), displayWeekday: $("#displayWeekday"),
@@ -383,6 +385,22 @@ function downloadBlob(filename,blob) {
   showToast(`${filename} 파일을 만들었습니다`);
 }
 
+function ensureJSZip() {
+  if (typeof JSZip !== "undefined") return Promise.resolve(JSZip);
+  if (jsZipPromise) return jsZipPromise;
+  jsZipPromise = new Promise((resolve,reject) => {
+    const script = document.createElement("script");
+    script.src = JSZIP_URL;
+    script.onload = () => typeof JSZip !== "undefined" ? resolve(JSZip) : reject(new Error("JSZip unavailable"));
+    script.onerror = () => reject(new Error("JSZip load failed"));
+    document.head.append(script);
+  }).catch(error => {
+    jsZipPromise = null;
+    throw error;
+  });
+  return jsZipPromise;
+}
+
 function exportEntryMarkdown(date,entry=entryFor(date)) {
   if (!hasContent(entry)) { showToast("내보낼 기록이 아직 없어요"); return; }
   downloadMarkdown(`${date}.md`,entryMarkdown(date,entry));
@@ -410,7 +428,6 @@ function weeklyMarkdown(date,review) {
 async function exportAllMarkdown() {
   const records = Object.entries(state.entries).filter(([,entry])=>hasContent(entry)).sort(([a],[b])=>a.localeCompare(b));
   if (!records.length) { showToast("내보낼 기록이 아직 없어요"); return; }
-  if (typeof JSZip === "undefined") { showToast("ZIP 기능을 불러오지 못했습니다. 인터넷 연결을 확인해주세요"); return; }
 
   const button = $("#exportAllBtn");
   const originalLabel = button.textContent;
@@ -418,7 +435,8 @@ async function exportAllMarkdown() {
   button.textContent = "ZIP 만드는 중…";
 
   try {
-    const zip = new JSZip();
+    const ZipLibrary = await ensureJSZip();
+    const zip = new ZipLibrary();
     records.forEach(([date,entry]) => zip.file(`${date}.md`,entryMarkdown(date,entry)));
 
     const weekly = Object.entries(state.weekly).sort(([a],[b])=>a.localeCompare(b));
