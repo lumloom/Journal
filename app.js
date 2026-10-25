@@ -58,14 +58,19 @@ function entryFor(date) {
 }
 
 function hasContent(entry) {
-  return Boolean(entry.focus || entry.memo || entry.summary || entry.keepsake || entry.keep || entry.timeline.some(Boolean) || entry.people?.some(person => person.name || person.conversation || person.followUp) || [...entry.tasks.work,...entry.tasks.personal].some(t => t.text));
+  const timeline = entry.timeline || [];
+  const tasks = [...(entry.tasks?.work || []),...(entry.tasks?.personal || [])];
+  return Boolean(entry.focus || entry.memo || entry.summary || entry.keepsake || entry.keep || timeline.some(Boolean) || entry.people?.some(person => person.name || person.conversation || person.followUp) || tasks.some(t => t.text));
 }
 
-function saveState() {
+function saveState(changedRecordId = null) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   els.saveIndicator.textContent = "방금 자동 저장했습니다";
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => els.saveIndicator.textContent = "이 기기에 자동 저장됩니다", 1600);
+  if (changedRecordId) {
+    document.dispatchEvent(new CustomEvent("lumloom:record-changed", { detail: { lumloomId: changedRecordId } }));
+  }
 }
 
 function updateEntry(mutator) {
@@ -74,7 +79,7 @@ function updateEntry(mutator) {
   const now = new Date().toISOString();
   entry.createdAt ||= now;
   entry.updatedAt = now;
-  saveState();
+  saveState(`journal-daily-${currentDate}`);
 }
 
 function formatDate(dateKey, options = {year:"numeric",month:"long",day:"numeric"}) {
@@ -345,7 +350,7 @@ function saveWeekly() {
   const existing = state.weekly[key] || {};
   const now = new Date().toISOString();
   state.weekly[key] = {gems:els.weeklyGems.value, pattern:els.weeklyPattern.value, energy:els.weeklyEnergy.value, focus:els.weeklyFocus.value, action:els.weeklyAction.value, createdAt:existing.createdAt || now, updatedAt:now};
-  saveState(); renderWeeklyHistory(); showToast("주간회고를 저장했습니다");
+  saveState(`journal-weekly-${key}`); renderWeeklyHistory(); showToast("주간회고를 저장했습니다");
   const button = $("#saveWeeklyBtn");
   button.textContent = "저장됨 ✓";
   setTimeout(() => button.textContent = "회고 저장",1600);
@@ -597,6 +602,58 @@ function exportPersonMarkdown(person) {
 
 function escapeHtml(value="") { const div=document.createElement("div"); div.textContent=value; return div.innerHTML; }
 function showToast(message) { els.toast.textContent=message; els.toast.classList.add("show"); setTimeout(()=>els.toast.classList.remove("show"),1800); }
+
+function listSyncRecords() {
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const daily = Object.entries(state.entries)
+    .filter(([,entry]) => hasContent(entry))
+    .map(([date,entry]) => ({
+      lumloom_id:`journal-daily-${date}`,
+      record_type:"daily",
+      record_date:date,
+      payload:clone(entry),
+      created_at:entry.createdAt || entry.updatedAt || null,
+      client_updated_at:entry.updatedAt || entry.createdAt || null
+    }));
+  const weekly = Object.entries(state.weekly).map(([date,review]) => ({
+    lumloom_id:`journal-weekly-${date}`,
+    record_type:"weekly-review",
+    record_date:date,
+    payload:clone(review),
+    created_at:review.createdAt || review.updatedAt || null,
+    client_updated_at:review.updatedAt || review.createdAt || null
+  }));
+  return [...daily,...weekly];
+}
+
+function applySyncRecord(record) {
+  if (!record || !record.record_date || !record.payload) return false;
+  const payload = JSON.parse(JSON.stringify(record.payload));
+  if (record.record_type === "daily") state.entries[record.record_date] = payload;
+  else if (record.record_type === "weekly-review") state.weekly[record.record_date] = payload;
+  else return false;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  renderToday();
+  if ($("#calendarView").classList.contains("active")) renderCalendar();
+  if ($("#archiveView").classList.contains("active")) renderArchive();
+  if ($("#peopleView").classList.contains("active")) renderPeople();
+  if ($("#weeklyView").classList.contains("active")) renderWeekly();
+  return true;
+}
+
+function downloadLocalBackup() {
+  downloadBlob(`Journal-local-backup-${todayKey()}.json`, new Blob([JSON.stringify(state,null,2)], {type:"application/json;charset=utf-8"}));
+  showToast("이 기기의 기록을 JSON으로 백업했습니다");
+}
+
+window.LumloomJournal = {
+  storageKey:STORAGE_KEY,
+  listSyncRecords,
+  getSyncRecord:lumloomId => listSyncRecords().find(record => record.lumloom_id === lumloomId) || null,
+  applySyncRecord,
+  downloadLocalBackup,
+  showToast
+};
 
 $$('[data-view]').forEach(button => button.addEventListener("click", () => switchView(button.dataset.view)));
 $$('[data-task-type]').forEach(button => button.addEventListener("click", () => addTask(button.dataset.taskType)));

@@ -19,6 +19,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { min-height: 100%; background: var(--paper); }
 body { margin: 0; min-width: 320px; min-height: 100dvh; background: var(--paper); }
 button, input, textarea { font: inherit; color: inherit; }
@@ -42,6 +43,13 @@ textarea { resize: vertical; }
 .sidebar-note span { color: #555; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
 .sidebar-note p { margin: 9px 0 0; font: 400 13px/1.7 Pretendard, sans-serif; }
 .save-indicator { margin: 13px 4px 0; color: var(--muted); font-size: 11px; }
+.account-button { width:100%; min-height:58px; margin-top:12px; padding:10px 12px; display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.45); text-align:left; }
+.account-button > span:last-child { min-width:0; display:grid; gap:2px; }
+.account-button strong { font-size:12px; }
+.account-button small { overflow:hidden; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.account-dot { width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:#aaa; box-shadow:0 0 0 4px rgba(0,0,0,.05); }
+.account-dot.online { background:#111; }
+.mobile-account-button { display:none; }
 
 .main { min-width: 0; padding: 44px clamp(28px, 5vw, 72px) 70px; }
 .view { display: none; max-width: 1320px; margin: 0 auto; }
@@ -54,6 +62,7 @@ textarea { resize: vertical; }
 .header-actions { display: flex; align-items: center; gap: 10px; }
 .icon-button, .date-picker, .primary-button { min-height: 44px; border-radius: 13px; }
 .icon-button { padding: 0 16px; border: 1px solid var(--line); background: rgba(255,255,255,.5); font-weight: 600; }
+.icon-button:disabled { color:var(--muted); background:rgba(255,255,255,.28); border-color:var(--line); cursor:not-allowed; opacity:.72; }
 .date-picker { display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line); background: rgba(255,255,255,.5); }
 .date-picker input { min-height: 40px; border: 0; background: transparent; }
 .primary-button { padding: 0 20px; border: 0; background: #111; color: #fff; font-weight: 700; box-shadow: none; }
@@ -172,6 +181,35 @@ textarea { resize: vertical; }
 .person-history p { margin:0; color:#444; font-size:13px; line-height:1.7; white-space:pre-wrap; }
 .person-history .follow-up { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
 .dialog-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+.account-dialog-card { display:grid; gap:18px; }
+.account-dialog-card h2 { margin-bottom:0; }
+.account-intro { margin:-8px 0 2px; color:var(--muted); font-size:13px; line-height:1.7; }
+.sync-panel, .auth-form, .account-session, .account-backup-row { padding:18px; border:1px solid var(--line); border-radius:15px; background:#f7f7f7; }
+.sync-panel strong, .account-backup-row strong { font-size:13px; }
+.sync-panel p, .auth-form p, .account-backup-row p, .sync-message { margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.65; }
+.sync-panel code { font-size:11px; }
+.auth-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:end; }
+.auth-form label { display:grid; gap:7px; }
+.auth-form label span, .account-session-heading span { color:var(--muted); font-size:11px; font-weight:600; }
+.auth-form input { width:100%; min-height:44px; padding:0 13px; border:1px solid var(--line); border-radius:11px; background:#fff; outline:0; }
+.auth-form p { grid-column:1/-1; margin:0; }
+.account-session-heading, .account-backup-row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.account-session-heading > div { min-width:0; display:grid; gap:4px; }
+.account-session-heading strong { overflow:hidden; font-size:14px; text-overflow:ellipsis; white-space:nowrap; }
+.text-button { min-height:36px; padding:0 10px; border:0; background:transparent; color:var(--muted); font-size:11px; }
+.sync-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
+.sync-summary div { padding:12px; display:grid; gap:3px; border-radius:11px; background:#fff; }
+.sync-summary strong { font-size:19px; }
+.sync-summary span { color:var(--muted); font-size:10px; }
+.sync-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.sync-actions button { flex:1; }
+.conflict-list { display:grid; gap:8px; margin-top:12px; }
+.conflict-card { padding:12px; border:1px solid #bbb; border-radius:11px; background:#fff; }
+.conflict-card strong { display:block; font-size:12px; }
+.conflict-card p { margin:4px 0 10px; color:var(--muted); font-size:11px; }
+.conflict-card div { display:flex; gap:7px; }
+.conflict-card button { min-height:36px; padding:0 10px; border:1px solid var(--line); border-radius:9px; background:#f5f5f5; font-size:11px; }
+.account-backup-row p { max-width:330px; }
 
 .weekly-layout { display:grid; grid-template-columns:minmax(270px,.72fr) minmax(0,1.45fr); gap:18px; align-items:start; }
 .week-days-card, .weekly-form-card { padding:25px; }
@@ -247,6 +285,7 @@ dialog::backdrop { background:rgba(24,30,27,.45); backdrop-filter:blur(4px); }
   .bottom-nav button { display:grid; place-items:center; gap:1px; border:0; border-radius:16px; background:transparent; color:var(--muted); font-size:11px; font-weight:600; }
   .bottom-nav button span { font-size:18px; }
   .bottom-nav button.active { color:#fff; background:#111; }
+  .mobile-account-button { position:fixed; z-index:9; top:calc(12px + env(safe-area-inset-top)); right:14px; min-height:38px; padding:0 12px; display:flex; align-items:center; gap:7px; border:1px solid rgba(17,17,17,.12); border-radius:999px; background:rgba(255,255,255,.9); box-shadow:0 8px 24px rgba(0,0,0,.08); backdrop-filter:blur(16px); font-size:11px; font-weight:700; }
 }
 
 @media (max-width: 620px) {
@@ -281,6 +320,10 @@ dialog::backdrop { background:rgba(24,30,27,.45); backdrop-filter:blur(4px); }
   .calendar-entry-preview { display:none; }
   .calendar-day .calendar-gem { top:10px; right:7px; font-size:8px; }
   .calendar-day .calendar-dot { margin:8px auto 0; }
+  .auth-form { grid-template-columns:1fr; }
+  .auth-form p { grid-column:auto; }
+  .account-session-heading, .account-backup-row { align-items:flex-start; }
+  .account-backup-row { display:grid; }
 }
 
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
