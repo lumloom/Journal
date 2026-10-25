@@ -262,9 +262,10 @@ function openRecord(date, entry) {
   const tasks = (type) => entry.tasks[type].filter(t=>t.text).map(t=>`<li>${t.done ? "✓ " : ""}${escapeHtml(t.text)}</li>`).join("") || "<li>기록 없음</li>";
   const timeline = entry.timeline.map((text,i) => text ? `<p><strong>${TIME_SLOTS[i]}</strong> ${escapeHtml(text)}</p>` : "").join("");
   const people = entry.people.filter(person => person.name || person.conversation || person.followUp).map(person => `<article><h4>${escapeHtml(person.name || "이름 미입력")}</h4><p>${escapeHtml(person.conversation || "대화 내용 없음")}</p>${person.followUp ? `<p class="follow-up"><strong>다음 행동</strong><br>${escapeHtml(person.followUp)}</p>` : ""}</article>`).join("");
-  els.dialogContent.innerHTML = `<span class="dialog-date">${formatDate(date,{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span><h2>${escapeHtml(entry.summary || entry.focus || "기록한 하루")} ${entry.keep ? '<span class="gem">◆</span>' : ""}</h2><div class="dialog-section"><h3>오늘의 핵심</h3><p>${escapeHtml(entry.focus || "—")}</p></div><div class="dialog-section dialog-tasks"><div><h3>업무</h3><ul>${tasks("work")}</ul></div><div><h3>개인</h3><ul>${tasks("personal")}</ul></div></div>${timeline ? `<div class="dialog-section"><h3>시간 기록</h3>${timeline}</div>` : ""}<div class="dialog-section"><h3>메모</h3><p>${escapeHtml(entry.memo || "—")}</p></div>${people ? `<div class="dialog-section person-history"><h3>만난 사람</h3>${people}</div>` : ""}<div class="dialog-section"><h3>남길 내용</h3><p>${escapeHtml(entry.keepsake || "—")}</p></div><div class="dialog-actions"><button class="primary-button" id="editRecordBtn" type="button">이 날 기록 수정하기</button><button class="icon-button" id="exportRecordBtn" type="button">MD 저장</button></div>`;
+  els.dialogContent.innerHTML = `<span class="dialog-date">${formatDate(date,{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span><h2>${escapeHtml(entry.summary || entry.focus || "기록한 하루")} ${entry.keep ? '<span class="gem">◆</span>' : ""}</h2><div class="dialog-section"><h3>오늘의 핵심</h3><p>${escapeHtml(entry.focus || "—")}</p></div><div class="dialog-section dialog-tasks"><div><h3>업무</h3><ul>${tasks("work")}</ul></div><div><h3>개인</h3><ul>${tasks("personal")}</ul></div></div>${timeline ? `<div class="dialog-section"><h3>시간 기록</h3>${timeline}</div>` : ""}<div class="dialog-section"><h3>메모</h3><p>${escapeHtml(entry.memo || "—")}</p></div>${people ? `<div class="dialog-section person-history"><h3>만난 사람</h3>${people}</div>` : ""}<div class="dialog-section"><h3>남길 내용</h3><p>${escapeHtml(entry.keepsake || "—")}</p></div><div class="dialog-actions"><button class="primary-button" id="editRecordBtn" type="button">이 날 기록 수정하기</button><button class="icon-button" id="exportRecordBtn" type="button">MD 저장</button><button class="icon-button" id="saveObsidianBtn" type="button">Obsidian에 저장</button></div>`;
   $("#editRecordBtn").addEventListener("click", () => { currentDate = date; els.dialog.close(); renderToday(); switchView("today"); });
   $("#exportRecordBtn").addEventListener("click", () => exportEntryMarkdown(date,entry));
+  $("#saveObsidianBtn").addEventListener("click", () => saveEntryToObsidian(date,entry));
   els.dialog.showModal();
 }
 
@@ -443,6 +444,27 @@ function entryMarkdown(date,entry,{frontmatter=true,headingLevel=1}={}) {
 function downloadMarkdown(filename,content) {
   const blob = new Blob([content],{type:"text/markdown;charset=utf-8"});
   downloadBlob(filename,blob);
+}
+
+function obsidianTimestamp() {
+  return new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");
+}
+
+function openMarkdownInObsidian(folder,filename,content) {
+  const file = `01. 수집함/${folder}/${safeFilename(filename)}`;
+  const uri = `obsidian://new?vault=${encodeURIComponent("Lumloom")}&file=${encodeURIComponent(file)}&content=${encodeURIComponent(content)}`;
+  if (uri.length > 12000) {
+    showToast("기록이 길어 MD 저장을 이용해 주세요");
+    return false;
+  }
+  showToast("Obsidian으로 보내는 중…");
+  window.location.href = uri;
+  return true;
+}
+
+function saveEntryToObsidian(date,entry=entryFor(date)) {
+  if (!hasContent(entry)) { showToast("저장할 기록이 아직 없어요"); return; }
+  openMarkdownInObsidian("Journal",`${date}-${obsidianTimestamp()}.md`,entryMarkdown(date,entry));
 }
 
 function downloadBlob(filename,blob) {

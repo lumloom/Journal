@@ -171,7 +171,7 @@ textarea { resize: vertical; }
 .person-history h4 { margin:10px 0 6px; font-size:13px; }
 .person-history p { margin:0; color:#444; font-size:13px; line-height:1.7; white-space:pre-wrap; }
 .person-history .follow-up { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
-.dialog-actions { display:flex; gap:10px; margin-top:26px; }
+.dialog-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
 
 .weekly-layout { display:grid; grid-template-columns:minmax(270px,.72fr) minmax(0,1.45fr); gap:18px; align-items:start; }
 .week-days-card, .weekly-form-card { padding:25px; }
