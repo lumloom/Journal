@@ -188,7 +188,7 @@ textarea { resize: vertical; }
 .sync-panel strong, .account-backup-row strong { font-size:13px; }
 .sync-panel p, .auth-form p, .account-backup-row p, .sync-message { margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.65; }
 .sync-panel code { font-size:11px; }
-.auth-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:end; }
+.auth-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) auto; gap:12px; align-items:end; }
 .auth-form label { display:grid; gap:7px; }
 .auth-form label span, .account-session-heading span { color:var(--muted); font-size:11px; font-weight:600; }
 .auth-form input { width:100%; min-height:44px; padding:0 13px; border:1px solid var(--line); border-radius:11px; background:#fff; outline:0; }
@@ -203,6 +203,13 @@ textarea { resize: vertical; }
 .sync-summary span { color:var(--muted); font-size:10px; }
 .sync-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
 .sync-actions button { flex:1; }
+.password-settings { margin-top:14px; padding-top:13px; border-top:1px solid var(--line); }
+.password-settings summary { cursor:pointer; color:var(--muted); font-size:11px; font-weight:600; }
+.password-settings form { margin-top:10px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:end; }
+.password-settings label { display:grid; gap:6px; color:var(--muted); font-size:11px; }
+.password-settings input { min-height:40px; padding:0 12px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+.password-settings .icon-button { width:auto; min-height:40px; padding:0 15px; }
+.password-settings p { margin:7px 0 0; color:var(--muted); font-size:10px; }
 .conflict-list { display:grid; gap:8px; margin-top:12px; }
 .conflict-card { padding:12px; border:1px solid #bbb; border-radius:11px; background:#fff; }
 .conflict-card strong { display:block; font-size:12px; }

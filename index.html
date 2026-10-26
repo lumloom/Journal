@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="./icon.svg" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20261025-sync-empty-state" />
+    <link rel="stylesheet" href="./styles.css?v=20261026-password-login" />
   </head>
   <body>
     <div class="app-shell">
@@ -209,8 +209,9 @@
 
         <form class="auth-form" id="authForm" hidden>
           <label><span>이메일</span><input id="authEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com" required /></label>
-          <button class="primary-button" type="submit">로그인 링크 받기</button>
-          <p>메일로 받은 링크를 누르면 비밀번호 없이 로그인됩니다.</p>
+          <label><span>비밀번호</span><input id="authPassword" type="password" autocomplete="current-password" minlength="8" placeholder="8자 이상" required /></label>
+          <button class="primary-button" id="authSubmit" type="submit">로그인</button>
+          <p>같은 Lumloom 이메일과 비밀번호를 네 기기에서 사용합니다.</p>
         </form>
 
         <section class="account-session" id="accountSession" hidden>
@@ -220,9 +221,14 @@
             <button class="primary-button" id="syncNowButton" type="button">지금 동기화</button>
             <button class="icon-button" id="uploadLocalButton" type="button">이 기기 기록 올리기</button>
           </div>
-          <p class="sync-message" id="syncMessage" role="status" aria-live="polite"></p>
+          <details class="password-settings">
+            <summary>비밀번호 설정·변경</summary>
+            <form id="passwordForm"><label><span>새 비밀번호</span><input id="newPassword" type="password" autocomplete="new-password" minlength="8" placeholder="8자 이상" required /></label><button class="icon-button" type="submit">저장</button></form>
+            <p>한 앱에서 설정한 비밀번호를 모든 Lumloom 앱에서 사용합니다.</p>
+          </details>
           <div class="conflict-list" id="conflictList"></div>
         </section>
+        <p class="sync-message" id="syncMessage" role="status" aria-live="polite"></p>
 
         <div class="account-backup-row"><div><strong>기기 백업</strong><p>동기화와 별도로 현재 브라우저의 전체 원본을 보관합니다.</p></div><button class="icon-button" id="downloadLocalBackupButton" type="button">JSON 백업</button></div>
       </article>
@@ -231,6 +237,6 @@
     <script src="./supabase-config.js?v=20261025-lumloom-account"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="./app.js?v=20261025-lumloom-account"></script>
-    <script src="./sync.js?v=20261025-sync-empty-state"></script>
+    <script src="./sync.js?v=20261026-password-login"></script>
   </body>
 </html>

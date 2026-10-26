@@ -304,19 +304,27 @@
   authForm.addEventListener("submit",async event => {
     event.preventDefault();
     const email = $("#authEmail").value.trim();
-    if (!email) return;
-    const submit = authForm.querySelector("button[type=submit]");
+    const password = $("#authPassword").value;
+    if (!email || !password) return;
+    const submit = $("#authSubmit");
     submit.disabled = true;
-    submit.textContent = "보내는 중…";
-    const redirectTo = `${location.origin}${location.pathname}`;
-    const {error} = await client.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+    submit.textContent = "로그인 중…";
+    const {error} = await client.auth.signInWithPassword({email,password});
     submit.disabled = false;
-    submit.textContent = "로그인 링크 받기";
-    if (error) journal.showToast(`로그인 링크를 보내지 못했습니다: ${error.message}`);
-    else {
-      journal.showToast("로그인 링크를 이메일로 보냈습니다");
-      setMessage("메일함에서 Lumloom 로그인 링크를 눌러주세요.");
-    }
+    submit.textContent = "로그인";
+    if (error) setMessage(error.message.toLowerCase().includes("invalid login") ? "이메일 또는 비밀번호를 확인해주세요." : `로그인하지 못했습니다. ${error.message}`, true);
+    else { $("#authPassword").value = ""; setMessage("로그인했습니다. 기록을 확인하고 있습니다…"); }
+  });
+
+  $("#passwordForm").addEventListener("submit",async event => {
+    event.preventDefault();
+    const input = $("#newPassword");
+    const button = event.currentTarget.querySelector("button");
+    button.disabled = true;
+    const {error} = await client.auth.updateUser({password:input.value});
+    button.disabled = false;
+    if (error) setMessage(`비밀번호를 저장하지 못했습니다. ${error.message}`, true);
+    else { input.value = ""; setMessage("Lumloom 공용 비밀번호를 저장했습니다."); }
   });
 
   $("#signOutButton").addEventListener("click",async () => {

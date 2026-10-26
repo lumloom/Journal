@@ -15,9 +15,9 @@ Supabase Dashboard의 SQL Editor에서 [`supabase/schema.sql`](./supabase/schema
 - 일일 기록과 주간 회고의 버전 번호 및 수정 시각
 - 충돌 감지를 위한 낙관적 버전 필드
 
-## 3. 이메일 로그인 설정
+## 3. 이메일·비밀번호 로그인 설정
 
-Authentication에서 이메일 로그인을 활성화하고 URL Configuration에 다음 주소를 등록합니다.
+Authentication에서 이메일 로그인을 활성화합니다. 기존 링크 로그인과 복구 흐름을 위해 URL Configuration에는 다음 주소를 유지합니다.
 
 - Site URL: `https://lumloom.github.io/Journal/`
 - Additional Redirect URL: `http://127.0.0.1:4188/**`
@@ -41,8 +41,8 @@ Publishable key는 브라우저용 공개 키입니다. `secret` 또는 `service
 ## 5. 첫 기록 업로드
 
 1. 변경 전 `JSON 백업`으로 이 기기 기록을 보관합니다.
-2. Lumloom 계정에서 이메일 로그인 링크를 요청합니다.
-3. 이메일 링크로 로그인합니다.
+2. 이미 로그인된 기기의 계정 창에서 `비밀번호 설정·변경`을 열고 공용 비밀번호를 한 번 설정합니다.
+3. 다른 기기나 홈 화면 웹앱에서 같은 이메일과 비밀번호로 로그인합니다.
 4. 계정 창의 로컬·클라우드 기록 수를 확인합니다.
 5. `이 기기 기록 올리기`를 눌러 기존 기록을 처음 업로드합니다.
 
