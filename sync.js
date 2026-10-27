@@ -312,7 +312,14 @@
     const {error} = await client.auth.signInWithPassword({email,password});
     submit.disabled = false;
     submit.textContent = "로그인";
-    if (error) setMessage(error.message.toLowerCase().includes("invalid login") ? "이메일 또는 비밀번호를 확인해주세요." : `로그인하지 못했습니다. ${error.message}`, true);
+    if (error) {
+      const text = error.message.toLowerCase();
+      setMessage(text.includes("email not confirmed")
+        ? "이메일 인증을 먼저 완료해주세요."
+        : text.includes("invalid login")
+          ? "이메일 또는 비밀번호를 확인해주세요."
+          : `로그인하지 못했습니다. ${error.message}`, true);
+    }
     else { $("#authPassword").value = ""; setMessage("로그인했습니다. 기록을 확인하고 있습니다…"); }
   });
 
