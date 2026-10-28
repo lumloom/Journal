@@ -47,6 +47,7 @@
               <p class="date-copy" id="displayWeekday"></p>
             </div>
             <div class="header-actions">
+              <button class="danger-button" id="deleteDayBtn" type="button">해당 일 삭제</button>
               <button class="icon-button" id="goTodayBtn" type="button">오늘</button>
               <label class="date-picker"><span class="sr-only">기록 날짜</span><input id="dateInput" type="date" /></label>
             </div>
@@ -236,7 +237,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="./supabase-config.js?v=20261025-lumloom-account"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="./app.js?v=20261025-lumloom-account"></script>
-    <script src="./sync.js?v=20261027-smtp-auth"></script>
+    <script src="./app.js?v=20261028-delete-day"></script>
+    <script src="./sync.js?v=20261028-delete-day"></script>
   </body>
 </html>

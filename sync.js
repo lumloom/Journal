@@ -37,8 +37,9 @@
     localStorage.setItem(META_KEY, JSON.stringify(meta));
   }
 
-  function samePayload(a,b) {
-    return JSON.stringify(a || null) === JSON.stringify(b || null);
+  function sameRecord(a,b) {
+    return (a?.status || "active") === (b?.status || "active")
+      && JSON.stringify(a?.payload || null) === JSON.stringify(b?.payload || null);
   }
 
   function escapeHtml(value="") {
@@ -70,10 +71,11 @@
     if (!user) return;
     $("#accountEmail").textContent = user.email || user.id;
     const localRecords = journal.listSyncRecords();
+    const visibleLocalRecords = localRecords.filter(record => record.status !== "deleted");
     const syncedCount = localRecords.filter(record => meta.records[record.lumloom_id]?.remoteVersion).length;
     const conflicts = Object.values(meta.conflicts);
     $("#syncSummary").innerHTML = [
-      [localRecords.length,"이 기기 기록"],
+      [visibleLocalRecords.length,"이 기기 기록"],
       [lastRemoteCount,"클라우드 기록"],
       [conflicts.length,"확인할 충돌"]
     ].map(([count,label]) => `<div><strong>${count}</strong><span>${label}</span></div>`).join("");
@@ -106,7 +108,7 @@
   async function fetchRemoteRecords() {
     const {data,error} = await client.from("journal_records").select("*").order("record_date", {ascending:true});
     if (error) throw error;
-    lastRemoteCount = data.length;
+    lastRemoteCount = data.filter(record => record.status !== "deleted").length;
     return data;
   }
 
@@ -133,7 +135,7 @@
       record_type:record.record_type,
       record_date:record.record_date,
       payload:record.payload,
-      status:"active",
+      status:record.status || "active",
       client_updated_at:record.client_updated_at,
       version:(tracked.remoteVersion || 0) + 1
     };
@@ -186,10 +188,10 @@
           journal.applySyncRecord(remote);
           trackRemote(remote);
         } else if (!tracked) {
-          if (samePayload(local.payload,remote.payload)) trackRemote(remote);
+          if (sameRecord(local,remote)) trackRemote(remote);
           else if (includeUntracked) addConflict(local,remote);
         } else if (tracked.dirty) {
-          if (tracked.remoteVersion !== remote.version && !samePayload(local.payload,remote.payload)) addConflict(local,remote);
+          if (tracked.remoteVersion !== remote.version && !sameRecord(local,remote)) addConflict(local,remote);
         } else if (tracked.remoteVersion !== remote.version) {
           journal.applySyncRecord(remote);
           trackRemote(remote);
@@ -202,7 +204,7 @@
           if (meta.records[local.lumloom_id]) continue;
           const remote = remoteById[local.lumloom_id];
           if (remote) {
-            if (samePayload(local.payload,remote.payload)) trackRemote(remote);
+            if (sameRecord(local,remote)) trackRemote(remote);
             else addConflict(local,remote);
           } else {
             meta.records[local.lumloom_id] = {remoteVersion:null,dirty:true,lastSyncedAt:null};

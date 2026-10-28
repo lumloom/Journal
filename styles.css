@@ -181,6 +181,9 @@ textarea { resize: vertical; }
 .person-history p { margin:0; color:#444; font-size:13px; line-height:1.7; white-space:pre-wrap; }
 .person-history .follow-up { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
 .dialog-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+.danger-button { min-height:44px; padding:0 16px; border:1px solid #d7c9c9; border-radius:13px; background:#fff; color:#8a3d3d; font-weight:700; }
+.danger-button:hover { border-color:#b98f8f; background:#fbf5f5; }
+.danger-button:disabled { color:#aaa; border-color:var(--line); background:rgba(255,255,255,.35); cursor:not-allowed; }
 .account-dialog-card { display:grid; gap:18px; }
 .account-dialog-card h2 { margin-bottom:0; }
 .account-intro { margin:-8px 0 2px; color:var(--muted); font-size:13px; line-height:1.7; }
@@ -298,7 +301,7 @@ dialog::backdrop { background:rgba(24,30,27,.45); backdrop-filter:blur(4px); }
 @media (max-width: 620px) {
   .main { padding-left:14px; padding-right:14px; }
   .page-header { display:block; margin-bottom:22px; }
-  .header-actions { margin-top:18px; }
+  .header-actions { margin-top:18px; flex-wrap:wrap; }
   .page-header h1 { font-size:30px; }
   .card { border-radius:18px; }
   .focus-card, .tasks-card, .timeline-card, .memo-card, .people-log-card, .review-card, .week-days-card, .weekly-form-card { padding:20px; }

@@ -31,8 +31,12 @@ const els = {
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved && saved.entries && saved.weekly ? saved : { entries: {}, weekly: {} };
-  } catch { return { entries: {}, weekly: {} }; }
+    if (saved && saved.entries && saved.weekly) {
+      saved.deleted ||= {};
+      return saved;
+    }
+    return { entries: {}, weekly: {}, deleted: {} };
+  } catch { return { entries: {}, weekly: {}, deleted: {} }; }
 }
 
 function todayKey() {
@@ -74,12 +78,43 @@ function saveState(changedRecordId = null) {
 }
 
 function updateEntry(mutator) {
+  const lumloomId = `journal-daily-${currentDate}`;
+  delete state.deleted[lumloomId];
   const entry = entryFor(currentDate);
   mutator(entry);
   const now = new Date().toISOString();
   entry.createdAt ||= now;
   entry.updatedAt = now;
-  saveState(`journal-daily-${currentDate}`);
+  saveState(lumloomId);
+}
+
+function deleteDayRecord(date = currentDate) {
+  const entry = state.entries[date];
+  if (!entry || !hasContent(entry)) {
+    showToast("삭제할 기록이 아직 없어요");
+    return false;
+  }
+  if (!window.confirm(`${formatDate(date)}의 기록을 삭제할까요?\n삭제한 내용은 동기화된 다른 기기에서도 사라집니다.`)) return false;
+
+  const lumloomId = `journal-daily-${date}`;
+  const deletedAt = new Date().toISOString();
+  delete state.entries[date];
+  state.deleted[lumloomId] = {
+    lumloom_id:lumloomId,
+    record_type:"daily",
+    record_date:date,
+    status:"deleted",
+    deleted_at:deletedAt
+  };
+  saveState(lumloomId);
+  if (els.dialog.open) els.dialog.close();
+  renderToday();
+  if ($("#calendarView").classList.contains("active")) renderCalendar();
+  if ($("#archiveView").classList.contains("active")) renderArchive();
+  if ($("#peopleView").classList.contains("active")) renderPeople();
+  if ($("#weeklyView").classList.contains("active")) renderWeekly();
+  showToast("해당 날짜의 기록을 삭제했습니다");
+  return true;
 }
 
 function formatDate(dateKey, options = {year:"numeric",month:"long",day:"numeric"}) {
@@ -101,6 +136,7 @@ function renderToday() {
   renderTimeline(entry.timeline);
   renderPeopleLogs(entry.people);
   updateProgress();
+  $("#deleteDayBtn").disabled = !hasContent(entry);
 }
 
 function renderTasks(type, tasks) {
@@ -267,10 +303,11 @@ function openRecord(date, entry) {
   const tasks = (type) => entry.tasks[type].filter(t=>t.text).map(t=>`<li>${t.done ? "✓ " : ""}${escapeHtml(t.text)}</li>`).join("") || "<li>기록 없음</li>";
   const timeline = entry.timeline.map((text,i) => text ? `<p><strong>${TIME_SLOTS[i]}</strong> ${escapeHtml(text)}</p>` : "").join("");
   const people = entry.people.filter(person => person.name || person.conversation || person.followUp).map(person => `<article><h4>${escapeHtml(person.name || "이름 미입력")}</h4><p>${escapeHtml(person.conversation || "대화 내용 없음")}</p>${person.followUp ? `<p class="follow-up"><strong>다음 행동</strong><br>${escapeHtml(person.followUp)}</p>` : ""}</article>`).join("");
-  els.dialogContent.innerHTML = `<span class="dialog-date">${formatDate(date,{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span><h2>${escapeHtml(entry.summary || entry.focus || "기록한 하루")} ${entry.keep ? '<span class="gem">◆</span>' : ""}</h2><div class="dialog-section"><h3>오늘의 핵심</h3><p>${escapeHtml(entry.focus || "—")}</p></div><div class="dialog-section dialog-tasks"><div><h3>업무</h3><ul>${tasks("work")}</ul></div><div><h3>개인</h3><ul>${tasks("personal")}</ul></div></div>${timeline ? `<div class="dialog-section"><h3>시간 기록</h3>${timeline}</div>` : ""}<div class="dialog-section"><h3>메모</h3><p>${escapeHtml(entry.memo || "—")}</p></div>${people ? `<div class="dialog-section person-history"><h3>만난 사람</h3>${people}</div>` : ""}<div class="dialog-section"><h3>남길 내용</h3><p>${escapeHtml(entry.keepsake || "—")}</p></div><div class="dialog-actions"><button class="primary-button" id="editRecordBtn" type="button">이 날 기록 수정하기</button><button class="icon-button" id="exportRecordBtn" type="button">MD 저장</button><button class="icon-button" id="saveObsidianBtn" type="button">Obsidian에 저장</button></div>`;
+  els.dialogContent.innerHTML = `<span class="dialog-date">${formatDate(date,{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</span><h2>${escapeHtml(entry.summary || entry.focus || "기록한 하루")} ${entry.keep ? '<span class="gem">◆</span>' : ""}</h2><div class="dialog-section"><h3>오늘의 핵심</h3><p>${escapeHtml(entry.focus || "—")}</p></div><div class="dialog-section dialog-tasks"><div><h3>업무</h3><ul>${tasks("work")}</ul></div><div><h3>개인</h3><ul>${tasks("personal")}</ul></div></div>${timeline ? `<div class="dialog-section"><h3>시간 기록</h3>${timeline}</div>` : ""}<div class="dialog-section"><h3>메모</h3><p>${escapeHtml(entry.memo || "—")}</p></div>${people ? `<div class="dialog-section person-history"><h3>만난 사람</h3>${people}</div>` : ""}<div class="dialog-section"><h3>남길 내용</h3><p>${escapeHtml(entry.keepsake || "—")}</p></div><div class="dialog-actions"><button class="primary-button" id="editRecordBtn" type="button">이 날 기록 수정하기</button><button class="icon-button" id="exportRecordBtn" type="button">MD 저장</button><button class="icon-button" id="saveObsidianBtn" type="button">Obsidian에 저장</button><button class="danger-button" id="deleteRecordBtn" type="button">해당 일 삭제</button></div>`;
   $("#editRecordBtn").addEventListener("click", () => { currentDate = date; els.dialog.close(); renderToday(); switchView("today"); });
   $("#exportRecordBtn").addEventListener("click", () => exportEntryMarkdown(date,entry));
   $("#saveObsidianBtn").addEventListener("click", () => saveEntryToObsidian(date,entry));
+  $("#deleteRecordBtn").addEventListener("click", () => deleteDayRecord(date));
   els.dialog.showModal();
 }
 
@@ -612,6 +649,7 @@ function listSyncRecords() {
       record_type:"daily",
       record_date:date,
       payload:clone(entry),
+      status:"active",
       created_at:entry.createdAt || entry.updatedAt || null,
       client_updated_at:entry.updatedAt || entry.createdAt || null
     }));
@@ -620,18 +658,43 @@ function listSyncRecords() {
     record_type:"weekly-review",
     record_date:date,
     payload:clone(review),
+    status:"active",
     created_at:review.createdAt || review.updatedAt || null,
     client_updated_at:review.updatedAt || review.createdAt || null
   }));
-  return [...daily,...weekly];
+  const deleted = Object.values(state.deleted || {}).map(record => ({
+    lumloom_id:record.lumloom_id,
+    record_type:record.record_type,
+    record_date:record.record_date,
+    payload:{},
+    status:"deleted",
+    created_at:null,
+    client_updated_at:record.deleted_at
+  }));
+  return [...daily,...weekly,...deleted];
 }
 
 function applySyncRecord(record) {
-  if (!record || !record.record_date || !record.payload) return false;
-  const payload = JSON.parse(JSON.stringify(record.payload));
-  if (record.record_type === "daily") state.entries[record.record_date] = payload;
-  else if (record.record_type === "weekly-review") state.weekly[record.record_date] = payload;
-  else return false;
+  if (!record || !record.lumloom_id || !record.record_date || !record.payload) return false;
+  state.deleted ||= {};
+  if (record.status === "deleted") {
+    if (record.record_type === "daily") delete state.entries[record.record_date];
+    else if (record.record_type === "weekly-review") delete state.weekly[record.record_date];
+    else return false;
+    state.deleted[record.lumloom_id] = {
+      lumloom_id:record.lumloom_id,
+      record_type:record.record_type,
+      record_date:record.record_date,
+      status:"deleted",
+      deleted_at:record.client_updated_at || record.updated_at || new Date().toISOString()
+    };
+  } else {
+    delete state.deleted[record.lumloom_id];
+    const payload = JSON.parse(JSON.stringify(record.payload));
+    if (record.record_type === "daily") state.entries[record.record_date] = payload;
+    else if (record.record_type === "weekly-review") state.weekly[record.record_date] = payload;
+    else return false;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   renderToday();
   if ($("#calendarView").classList.contains("active")) renderCalendar();
@@ -664,6 +727,7 @@ $("#calendarPrevBtn").addEventListener("click", () => moveCalendarMonth(-1));
 $("#calendarNextBtn").addEventListener("click", () => moveCalendarMonth(1));
 $("#calendarTodayBtn").addEventListener("click", () => { calendarMonth=monthStartKey(todayKey()); renderCalendar(); });
 $("#exportAllBtn").addEventListener("click", exportAllMarkdown);
+$("#deleteDayBtn").addEventListener("click", () => deleteDayRecord(currentDate));
 els.focus.addEventListener("input",()=>updateEntry(e=>e.focus=els.focus.value));
 els.memo.addEventListener("input",()=>updateEntry(e=>e.memo=els.memo.value));
 els.summary.addEventListener("input",()=>updateEntry(e=>e.summary=els.summary.value));
