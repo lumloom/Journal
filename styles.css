@@ -257,7 +257,7 @@ dialog::backdrop { background:rgba(24,30,27,.45); backdrop-filter:blur(4px); }
 .dialog-section p { margin:0; line-height:1.8; white-space:pre-wrap; }
 .dialog-tasks { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
 .dialog-tasks ul { margin:0; padding-left:20px; line-height:1.8; }
-.toast { position:fixed; z-index:20; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translate(-50%,16px); padding:12px 18px; border-radius:12px; background:var(--green); color:#fff; font-size:13px; opacity:0; pointer-events:none; transition:.2s ease; }
+.toast { position:fixed; z-index:2147483647; left:50%; top:calc(18px + env(safe-area-inset-top)); width:max-content; max-width:min(420px,calc(100vw - 32px)); transform:translate(-50%,-12px); padding:12px 18px; border-radius:12px; background:var(--green); color:#fff; box-shadow:0 12px 34px rgba(26,48,38,.25); font-size:13px; line-height:1.55; text-align:center; opacity:0; pointer-events:none; transition:.2s ease; }
 .toast.show { opacity:1; transform:translate(-50%,0); }
 .bottom-nav { display:none; }
 

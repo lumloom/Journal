@@ -1,5 +1,6 @@
 const STORAGE_KEY = "giant-journal-v1";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+const OBSIDIAN_INLINE_URI_LIMIT = 12000;
 const TIME_SLOTS = ["06–09", "09–12", "12–15", "15–18", "18–21", "21–24"];
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -11,6 +12,7 @@ let archiveFilter = "all";
 let selectedWeekKey = weekStartKey();
 let saveTimer;
 let jsZipPromise;
+let toastTimer;
 
 const els = {
   dateInput: $("#dateInput"), displayDate: $("#displayDate"), displayWeekday: $("#displayWeekday"),
@@ -492,21 +494,31 @@ function obsidianTimestamp() {
   return new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");
 }
 
-function openMarkdownInObsidian(folder,filename,content) {
+async function openMarkdownInObsidian(folder,filename,content) {
   const file = `01. 수집함/${folder}/${safeFilename(filename)}`;
-  const uri = `obsidian://new?vault=${encodeURIComponent("Lumloom")}&file=${encodeURIComponent(file)}&content=${encodeURIComponent(content)}`;
-  if (uri.length > 12000) {
-    showToast("기록이 길어 MD 저장을 이용해 주세요");
+  const baseUri = `obsidian://new?vault=${encodeURIComponent("Lumloom")}&file=${encodeURIComponent(file)}`;
+  const inlineUri = `${baseUri}&content=${encodeURIComponent(content)}`;
+  if (inlineUri.length <= OBSIDIAN_INLINE_URI_LIMIT) {
+    showToast("Obsidian으로 보내는 중…");
+    window.location.href = inlineUri;
+    return true;
+  }
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+    await navigator.clipboard.writeText(content);
+    showToast("긴 기록을 Obsidian으로 보내는 중…");
+    window.location.href = `${baseUri}&clipboard`;
+    return true;
+  } catch (error) {
+    console.warn("Obsidian clipboard handoff failed",error);
+    showToast("긴 기록 저장에는 클립보드 권한이 필요해요. 권한을 허용하거나 MD 저장을 이용해 주세요",5000);
     return false;
   }
-  showToast("Obsidian으로 보내는 중…");
-  window.location.href = uri;
-  return true;
 }
 
-function saveEntryToObsidian(date,entry=entryFor(date)) {
+async function saveEntryToObsidian(date,entry=entryFor(date)) {
   if (!hasContent(entry)) { showToast("저장할 기록이 아직 없어요"); return; }
-  openMarkdownInObsidian("Journal",`${date}-${obsidianTimestamp()}.md`,entryMarkdown(date,entry));
+  await openMarkdownInObsidian("Journal",`${date}-${obsidianTimestamp()}.md`,entryMarkdown(date,entry));
 }
 
 function downloadBlob(filename,blob) {
@@ -638,7 +650,15 @@ function exportPersonMarkdown(person) {
 }
 
 function escapeHtml(value="") { const div=document.createElement("div"); div.textContent=value; return div.innerHTML; }
-function showToast(message) { els.toast.textContent=message; els.toast.classList.add("show"); setTimeout(()=>els.toast.classList.remove("show"),1800); }
+function showToast(message,duration=2200) {
+  const openDialogs = $$("dialog[open]");
+  const host = openDialogs[openDialogs.length-1] || document.body;
+  if (els.toast.parentElement !== host) host.append(els.toast);
+  els.toast.textContent=message;
+  els.toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>els.toast.classList.remove("show"),duration);
+}
 
 function listSyncRecords() {
   const clone = value => JSON.parse(JSON.stringify(value));
