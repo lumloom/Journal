@@ -1,6 +1,9 @@
 const STORAGE_KEY = "giant-journal-v1";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 const OBSIDIAN_INLINE_URI_LIMIT = 12000;
+const OBSIDIAN_HANDOFF_KEY = "lumloom-journal-obsidian-handoff";
+const OBSIDIAN_SUCCESS_PARAM = "lumloom_obsidian_saved";
+const OBSIDIAN_UNCONFIRMED_MESSAGE = "저장 완료를 확인하지 못했어요. Lumloom Vault가 없거나 이름이 다를 수 있습니다. MD 저장을 이용해 주세요.";
 const TIME_SLOTS = ["06–09", "09–12", "12–15", "15–18", "18–21", "21–24"];
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -494,12 +497,64 @@ function obsidianTimestamp() {
   return new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");
 }
 
+function beginObsidianHandoff() {
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(OBSIDIAN_HANDOFF_KEY,token);
+  const callbackUrl = new URL(window.location.href);
+  callbackUrl.searchParams.set(OBSIDIAN_SUCCESS_PARAM,token);
+  return { token, successUrl:callbackUrl.toString() };
+}
+
+function cancelObsidianHandoff(token) {
+  if (localStorage.getItem(OBSIDIAN_HANDOFF_KEY) === token) localStorage.removeItem(OBSIDIAN_HANDOFF_KEY);
+}
+
+function consumeObsidianSuccess() {
+  const currentUrl = new URL(window.location.href);
+  const token = currentUrl.searchParams.get(OBSIDIAN_SUCCESS_PARAM);
+  if (!token) return false;
+  const confirmed = localStorage.getItem(OBSIDIAN_HANDOFF_KEY) === token;
+  if (confirmed) localStorage.removeItem(OBSIDIAN_HANDOFF_KEY);
+  currentUrl.searchParams.delete(OBSIDIAN_SUCCESS_PARAM);
+  history.replaceState(history.state,"",`${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+  return confirmed;
+}
+
+function watchObsidianHandoff(token,onUnconfirmed) {
+  let departed = false;
+  let settled = false;
+  const pending = () => localStorage.getItem(OBSIDIAN_HANDOFF_KEY) === token;
+  const cleanup = () => {
+    window.removeEventListener("blur",onDepart);
+    window.removeEventListener("focus",onReturn);
+    document.removeEventListener("visibilitychange",onVisibility);
+  };
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    if (!pending()) return;
+    localStorage.removeItem(OBSIDIAN_HANDOFF_KEY);
+    onUnconfirmed();
+  };
+  const onDepart = () => { departed = true; };
+  const onReturn = () => { if (departed) setTimeout(finish,500); };
+  const onVisibility = () => document.hidden ? onDepart() : onReturn();
+  window.addEventListener("blur",onDepart);
+  window.addEventListener("focus",onReturn);
+  document.addEventListener("visibilitychange",onVisibility);
+  setTimeout(() => { if (!departed && !document.hidden) finish(); },8000);
+}
+
 async function openMarkdownInObsidian(folder,filename,content) {
   const file = `01. 수집함/${folder}/${safeFilename(filename)}`;
   const baseUri = `obsidian://new?vault=${encodeURIComponent("Lumloom")}&file=${encodeURIComponent(file)}`;
-  const inlineUri = `${baseUri}&content=${encodeURIComponent(content)}`;
+  const handoff = beginObsidianHandoff();
+  const successParam = `&x-success=${encodeURIComponent(handoff.successUrl)}`;
+  const inlineUri = `${baseUri}&content=${encodeURIComponent(content)}${successParam}`;
   if (inlineUri.length <= OBSIDIAN_INLINE_URI_LIMIT) {
     showToast("Obsidian으로 보내는 중…");
+    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_UNCONFIRMED_MESSAGE,6500));
     window.location.href = inlineUri;
     return true;
   }
@@ -507,9 +562,11 @@ async function openMarkdownInObsidian(folder,filename,content) {
     if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
     await navigator.clipboard.writeText(content);
     showToast("긴 기록을 Obsidian으로 보내는 중…");
-    window.location.href = `${baseUri}&clipboard`;
+    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_UNCONFIRMED_MESSAGE,6500));
+    window.location.href = `${baseUri}&clipboard${successParam}`;
     return true;
   } catch (error) {
+    cancelObsidianHandoff(handoff.token);
     console.warn("Obsidian clipboard handoff failed",error);
     showToast("긴 기록 저장에는 클립보드 권한이 필요해요. 권한을 허용하거나 MD 저장을 이용해 주세요",5000);
     return false;
@@ -763,3 +820,4 @@ els.dialog.addEventListener("click",event=>{if(event.target===els.dialog)els.dia
 window.addEventListener("storage",event=>{if(event.key===STORAGE_KEY)location.reload();});
 
 renderToday();
+if (consumeObsidianSuccess()) showToast("Obsidian의 Lumloom 수집함에 저장했습니다",4000);
