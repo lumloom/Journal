@@ -1,0 +1,31 @@
+{
+  "schema_version": "lumloom-dev-log/v1",
+  "work_id": "readme-current-state-20261031",
+  "project_key": "journal",
+  "title": "거인의기록 README 최신화",
+  "purpose": "현재 앱 기능, 로컬 실행 경로, Markdown 계약, Lumloom Vault 직접 저장과 Bridge 역할을 실제 구현에 맞게 문서화합니다.",
+  "category": "Documentation",
+  "status": "Completed",
+  "completed_at": "2026-10-31T22:34:07+09:00",
+  "changes": [
+    "공개 서비스 주소와 현재 로컬 실행 경로를 명시했습니다.",
+    "lumloom-record/v1, 수집함 경로, 긴 기록 clipboard 전환, x-success 확인과 Bridge 경계를 문서화했습니다."
+  ],
+  "technical_changes": {
+    "files": ["README.md"]
+  },
+  "tests": [
+    {
+      "name": "README-to-code consistency audit",
+      "result": "passed",
+      "details": "README의 저장 경로, 스키마, 콜백, 실행 경로를 현재 app.js와 저장소 구조에 대조했습니다."
+    },
+    {
+      "name": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "next_actions": [],
+  "related_commit_shas": ["5ac78c8", "1531b64"],
+  "sensitive_data_review": "passed"
+}
