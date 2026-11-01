@@ -1,0 +1,24 @@
+{
+  "schema_version": "lumloom-dev-log/v1",
+  "work_id": "obsidian-neutral-return-notice-20261031",
+  "project_key": "journal",
+  "title": "Obsidian 복귀 안내를 중립적인 상단 알림으로 변경",
+  "purpose": "Obsidian 저장 성공과 실패를 브라우저 포커스만으로 구분할 수 없는 환경에서 정상 저장을 실패처럼 안내하지 않도록 수정합니다.",
+  "category": "Bug Fix",
+  "status": "Completed",
+  "completed_at": "2026-10-31T22:58:35+09:00",
+  "changes": [
+    "콜백 없이 앱으로 돌아온 경우 성공이나 실패를 단정하지 않는 수집함 확인 문구를 표시합니다.",
+    "기존 상단 알림과 6.5초 자동 닫힘 동작을 유지하고 정적 자산 캐시 키를 갱신했습니다."
+  ],
+  "technical_changes": {
+    "files": ["app.js", "index.html", "README.md"]
+  },
+  "tests": [
+    { "name": "node --check app.js", "result": "passed" },
+    { "name": "git diff --check", "result": "passed" }
+  ],
+  "next_actions": ["배포 후 Chrome에서 Obsidian 복귀 시 중립 안내가 상단에 표시되는지 확인합니다."],
+  "related_commit_shas": ["5ac78c8"],
+  "sensitive_data_review": "passed"
+}

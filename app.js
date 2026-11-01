@@ -3,7 +3,7 @@ const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 const OBSIDIAN_INLINE_URI_LIMIT = 12000;
 const OBSIDIAN_HANDOFF_KEY = "lumloom-journal-obsidian-handoff";
 const OBSIDIAN_SUCCESS_PARAM = "lumloom_obsidian_saved";
-const OBSIDIAN_UNCONFIRMED_MESSAGE = "저장 완료를 확인하지 못했어요. Lumloom Vault가 없거나 이름이 다를 수 있습니다. MD 저장을 이용해 주세요.";
+const OBSIDIAN_RETURN_MESSAGE = "Obsidian으로 저장 요청을 보냈습니다. Lumloom Vault의 01. 수집함을 확인해 주세요. Vault가 없거나 이름이 다르면 저장되지 않을 수 있습니다.";
 const TIME_SLOTS = ["06–09", "09–12", "12–15", "15–18", "18–21", "21–24"];
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -520,7 +520,7 @@ function consumeObsidianSuccess() {
   return confirmed;
 }
 
-function watchObsidianHandoff(token,onUnconfirmed) {
+function watchObsidianHandoff(token,onReturnNotice) {
   let departed = false;
   let settled = false;
   const pending = () => localStorage.getItem(OBSIDIAN_HANDOFF_KEY) === token;
@@ -535,7 +535,7 @@ function watchObsidianHandoff(token,onUnconfirmed) {
     cleanup();
     if (!pending()) return;
     localStorage.removeItem(OBSIDIAN_HANDOFF_KEY);
-    onUnconfirmed();
+    onReturnNotice();
   };
   const onDepart = () => { departed = true; };
   const onReturn = () => { if (departed) setTimeout(finish,500); };
@@ -554,7 +554,7 @@ async function openMarkdownInObsidian(folder,filename,content) {
   const inlineUri = `${baseUri}&content=${encodeURIComponent(content)}${successParam}`;
   if (inlineUri.length <= OBSIDIAN_INLINE_URI_LIMIT) {
     showToast("Obsidian으로 보내는 중…");
-    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_UNCONFIRMED_MESSAGE,6500));
+    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_RETURN_MESSAGE,6500));
     window.location.href = inlineUri;
     return true;
   }
@@ -562,7 +562,7 @@ async function openMarkdownInObsidian(folder,filename,content) {
     if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
     await navigator.clipboard.writeText(content);
     showToast("긴 기록을 Obsidian으로 보내는 중…");
-    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_UNCONFIRMED_MESSAGE,6500));
+    watchObsidianHandoff(handoff.token,()=>showToast(OBSIDIAN_RETURN_MESSAGE,6500));
     window.location.href = `${baseUri}&clipboard${successParam}`;
     return true;
   } catch (error) {
