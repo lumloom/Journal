@@ -31,7 +31,7 @@ textarea { resize: vertical; }
 .app-shell { min-height: 100dvh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; height: 100dvh; padding: max(30px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; border-right: 1px solid var(--line); background: #ececec; }
 .brand { display: flex; align-items: center; gap: 12px; width: 100%; padding: 0 4px; border: 0; background: transparent; text-align: left; }
-.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: #111; color: #fff; font: 700 21px Pretendard, sans-serif; box-shadow: none; }
+.brand-mark { width: 42px; height: 42px; flex: 0 0 42px; display: block; border-radius: 11px; object-fit: cover; box-shadow: none; }
 .brand strong, .brand small { display: block; }
 .brand strong { font: 700 18px Pretendard, sans-serif; letter-spacing: -.03em; }
 .brand small { margin-top: 3px; color: var(--muted); font-size: 11px; }
